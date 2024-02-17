@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QApplication, QFileDialog, QMenuBar, QTreeView,
 log_regex = r"\[.*,(.*T.*),0,.*,.*,.*,.*,.*\](.*)"
 reward_regex = r"You received ([\d,]+) (.*)"
 reward_regex_2 = r"Items acquired: (.*) x ([\d,]+)"
+reward_regex_3 = r"Item acquired: (.*)"
 
 
 class ChatLogWidget(QWidget):
@@ -112,7 +113,7 @@ class ChatLogWidget(QWidget):
             return
 
         self.setWindowTitle(
-            f"Numeric Received ({int(secs/3600):0>2,.0f}h {int(secs%3600/60)}m {int(secs%60)}s) ({int(dil/secs)} DPS)"
+            f"Numeric Received ({int(secs/3600):0>2}h {int(secs%3600/60):0>2}m {int(secs%60)}s) ({int(dil/secs):0>2} DPS)"
         )
 
     @QtCore.Slot()
@@ -189,6 +190,7 @@ class WorkerThread(QtCore.QThread):
                         )
                         match2 = re.match(reward_regex, match.group(2))
                         match3 = re.match(reward_regex_2, match.group(2))
+                        match4 = re.match(reward_regex_3, match.group(2))
                         if match2:
                             key = match2.group(2)
                             val = int(match2.group(1).replace(",", ""))
@@ -200,6 +202,14 @@ class WorkerThread(QtCore.QThread):
                         elif match3:
                             key = match3.group(1)
                             val = int(match3.group(2).replace(",", ""))
+                            if self.rewards.get(key):
+                                self.rewards[key] += val
+                            else:
+                                self.rewards[key] = val
+                            self.signals.results.emit(self.rewards)
+                        elif match4:
+                            key = match4.group(1)
+                            val = 1
                             if self.rewards.get(key):
                                 self.rewards[key] += val
                             else:
