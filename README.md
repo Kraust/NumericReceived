@@ -1,4 +1,4 @@
-# Numeric Record
+# Numeric Received
 
 ![image](https://github.com/Kraust/NumericReceived/assets/6548135/049c3074-3ae5-4da0-a5f4-38fa2268c395)
 
