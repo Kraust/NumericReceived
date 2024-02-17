@@ -1,5 +1,7 @@
 """ Chat Log Processing Class """
 import datetime
+import json
+import os
 import re
 import time
 from typing import Iterator
@@ -38,6 +40,11 @@ class ChatLogWidget(QWidget):
             self.open_dialog,
         )
         self.file_menu.addAction(
+            "Save",
+            QKeySequence("Ctrl+S"),
+            self.save_dialog,
+        )
+        self.file_menu.addAction(
             "Exit",
             QKeySequence("Ctrl+Q"),
             self.exit,
@@ -68,17 +75,19 @@ class ChatLogWidget(QWidget):
 
     @QtCore.Slot()
     def open_dialog(self):
-        """Open Combat Log Dialog Box"""
+        """Open Chat Log Dialog Box"""
 
+        open_dir = self.settings.value("open_dir")
         fname, _ = QFileDialog.getOpenFileName(
             self,
             "Open Log File",
-            "",
-            "Chat Log (*.log)",
+            dir=open_dir,
+            options=QFileDialog.DontUseNativeDialog,
         )
         if fname:
             self.filename = fname
             self.settings.setValue("filename", self.filename)
+            self.settings.setValue("open_dir", os.path.dirname(self.filename))
             if self.worker_thread:
                 self.worker_thread.exit()
             self.worker_thread = WorkerThread(self)
@@ -88,10 +97,29 @@ class ChatLogWidget(QWidget):
             self.filename = None
             self.worker_thread = None
 
+    @QtCore.Slot()
+    def save_dialog(self):
+        """Save Chat Log Metadata"""
+
+        save_dir = self.settings.value("save_dir")
+        fname, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Log Metadata",
+            dir=os.path.join(save_dir, f"{self.results['start']}.json"),
+            options=QFileDialog.DontUseNativeDialog,
+        )
+
+        if fname:
+            self.settings.setValue("save_dir", os.path.dirname(fname))
+            with open(fname, "w") as file:
+                file.write(json.dumps(self.results))
+
     @QtCore.Slot(dict)
-    def populate(self, rewards):
+    def populate(self, results):
         self.results_model.clear()
         self.results_model.setHorizontalHeaderLabels(["Item", "Amount"])
+        self.results = results
+        rewards = self.results.get("rewards", {})
 
         for k, v in rewards.items():
             row_item = QStandardItem(k)
@@ -175,6 +203,8 @@ class WorkerThread(QtCore.QThread):
         while self.running:
             self.start = datetime.datetime.utcnow()
             self.emit = False
+            self.last = self.start
+            self.delta = self.last - self.start
 
             if not self.filename:
                 time.sleep(1)
@@ -182,6 +212,12 @@ class WorkerThread(QtCore.QThread):
 
             with open(self.filename, "r+") as file:
                 for line in self.follow(file):
+                    data = {
+                        "start": self.start.timestamp(),
+                        "end": self.last.timestamp(),
+                        "duration": self.delta.total_seconds(),
+                        "rewards": self.rewards,
+                    }
                     match = re.match(log_regex, line)
                     if match:
                         at = datetime.datetime.strptime(
@@ -198,7 +234,7 @@ class WorkerThread(QtCore.QThread):
                                 self.rewards[key] += val
                             else:
                                 self.rewards[key] = val
-                            self.signals.results.emit(self.rewards)
+                            self.signals.results.emit(data)
                         elif match3:
                             key = match3.group(1)
                             val = int(match3.group(2).replace(",", ""))
@@ -206,7 +242,7 @@ class WorkerThread(QtCore.QThread):
                                 self.rewards[key] += val
                             else:
                                 self.rewards[key] = val
-                            self.signals.results.emit(self.rewards)
+                            self.signals.results.emit(data)
                         elif match4:
                             key = match4.group(1)
                             val = 1
@@ -214,22 +250,22 @@ class WorkerThread(QtCore.QThread):
                                 self.rewards[key] += val
                             else:
                                 self.rewards[key] = val
-                            self.signals.results.emit(self.rewards)
+                            self.signals.results.emit(data)
                         elif "ChatLog ON" in match.group(2):
                             self.emit = True
                             self.start = at
                             self.rewards = {}
-                            self.signals.results.emit(self.rewards)
+                            self.signals.results.emit(data)
                         elif "ChatLog OFF" in match.group(2):
                             self.emit = False
 
                     if self.emit:
                         self.last = at
-                        delta = self.last - self.start
+                        self.delta = self.last - self.start
                         self.signals.seconds.emit(
                             (
                                 self.rewards.get("Dilithium Ore", 0),
-                                delta.total_seconds(),
+                                self.delta.total_seconds(),
                             ),
                         )
 
