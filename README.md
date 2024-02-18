@@ -4,3 +4,7 @@
 
 Numeric Received is a half-assed attempt at a chat log parser with the emphasis
 on being able to record drops and calculate Dilithium Per Second (DPS).
+
+# Usage
+
+This application triggers off of seeing messages "ChatLog ON" and "ChatLog OFF" in your chat log.
