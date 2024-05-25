@@ -8,9 +8,10 @@ from typing import Iterator
 
 from PySide6 import QtCore
 from PySide6.QtCore import QSettings, Qt
-from PySide6.QtGui import QKeySequence, QStandardItem, QStandardItemModel
+from PySide6.QtGui import (QClipboard, QKeySequence, QStandardItem,
+                           QStandardItemModel)
 from PySide6.QtWidgets import (QApplication, QFileDialog, QMenuBar, QTreeView,
-                               QVBoxLayout, QWidget)
+                               QVBoxLayout, QWidget, QLabel)
 
 # log_regex = r"\[.*,(.*T.*),.*,[.*]@,@,,,[.*]\](.*)"
 log_regex = r"\[.*,(.*T.*),0,.*,.*,.*,.*,.*\](.*)"
@@ -40,6 +41,11 @@ class ChatLogWidget(QWidget):
             self.open_dialog,
         )
         self.file_menu.addAction(
+            "Copy",
+            QKeySequence("Ctrl+C"),
+            self.copy_summary,
+        )
+        self.file_menu.addAction(
             "Save",
             QKeySequence("Ctrl+S"),
             self.save_dialog,
@@ -49,6 +55,8 @@ class ChatLogWidget(QWidget):
             QKeySequence("Ctrl+Q"),
             self.exit,
         )
+
+        self.clipboard = QClipboard()
 
         self.worker_thread = None
 
@@ -61,8 +69,12 @@ class ChatLogWidget(QWidget):
         self.results_layout.setContentsMargins(0, 0, 0, 0)
         self.results_layout.addWidget(self.results_view)
 
+        self.label = QLabel()
+        self.label.setText("Numeric Received")
+
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.menu)
+        self.layout.addWidget(self.label)
         self.layout.addWidget(self.results_widget)
 
         self.filename = self.settings.value("filename")
@@ -96,6 +108,16 @@ class ChatLogWidget(QWidget):
         else:
             self.filename = None
             self.worker_thread = None
+
+    @QtCore.Slot()
+    def copy_summary(self):
+        """Save Chat Log Metadata"""
+        secs = self.results.get("duration")
+        dil = self.results.get("rewards", {}).get("Dilithium Ore", 0)
+        self.clipboard.setText(
+            f"NR ({int(secs/3600):0>2}h {int(secs%3600/60):0>2}m {int(secs%60)}s) - {int(dil/secs):0>2} DPS",
+            mode=QClipboard.Mode.Clipboard,
+        )
 
     @QtCore.Slot()
     def save_dialog(self):
@@ -136,13 +158,14 @@ class ChatLogWidget(QWidget):
     def update_title(self, tup):
         dil = tup[0]
         secs = tup[1]
-        if not secs:
-            self.setWindowTitle("Numeric Received (not running)")
-            return
 
-        self.setWindowTitle(
-            f"Numeric Received ({int(secs/3600):0>2}h {int(secs%3600/60):0>2}m {int(secs%60)}s) ({int(dil/secs):0>2} DPS)"
-        )
+        if not secs:
+            text = "Numeric Received (not running)"
+        else:
+            text = f"Numeric Received ({int(secs/3600):0>2}h {int(secs%3600/60):0>2}m {int(secs%60)}s) ({int(dil/secs):0>2} DPS)"
+
+        self.setWindowTitle(text)
+        self.label.setText(text)
 
     @QtCore.Slot()
     def exit(self):
