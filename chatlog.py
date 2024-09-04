@@ -124,6 +124,8 @@ class ChatLogWidget(QWidget):
         """Save Chat Log Metadata"""
 
         save_dir = self.settings.value("save_dir")
+        if save_dir is None:
+            save_dir = ""
         fname, _ = QFileDialog.getSaveFileName(
             self,
             "Save Log Metadata",
@@ -213,7 +215,7 @@ class WorkerThread(QtCore.QThread):
             elif sleep_sec:
                 if self.start:
                     if self.emit:
-                        delta = datetime.datetime.utcnow() - self.start
+                        delta = datetime.datetime.now() - self.start
                         self.signals.seconds.emit(
                             (
                                 self.rewards.get("Dilithium Ore", 0),
@@ -224,7 +226,7 @@ class WorkerThread(QtCore.QThread):
 
     def run(self):
         while self.running:
-            self.start = datetime.datetime.utcnow()
+            self.start = datetime.datetime.now()
             self.emit = False
             self.last = self.start
             self.delta = self.last - self.start
