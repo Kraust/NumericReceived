@@ -49,24 +49,24 @@ def main():
                     datetime.fromtimestamp(data["start"]).isoformat(),
                     datetime.fromtimestamp(data["end"]).isoformat(),
                     str(data["duration"]),
-                    str(data["rewards"].get(args.field)),
-                    str(data["rewards"].get(args.field) / data["duration"]),
-                    str(data["rewards"].get(args.field) / data["duration"] * 3600),
+                    str(data["rewards"].get(args.field, 0)),
+                    str(data["rewards"].get(args.field, 0) / data["duration"]),
+                    str(data["rewards"].get(args.field, 0) / data["duration"] * 3600),
                     str(
-                        data["rewards"].get(args.field)
+                        data["rewards"].get(args.field, 0)
                         / data["duration"]
                         * 3600
                         * args.per_day
                     ),
                     str(
-                        data["rewards"].get(args.field)
+                        data["rewards"].get(args.field, 0)
                         / data["duration"]
                         * 3600
                         * args.per_day
                         * 7
                     ),
                     str(
-                        data["rewards"].get(args.field)
+                        data["rewards"].get(args.field, 0)
                         / data["duration"]
                         * 3600
                         * args.per_day
