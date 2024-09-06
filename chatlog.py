@@ -51,6 +51,11 @@ class ChatLogWidget(QWidget):
             self.save_dialog,
         )
         self.file_menu.addAction(
+            "Truncate",
+            QKeySequence("Ctrl+T"),
+            self.truncate_dialog,
+        )
+        self.file_menu.addAction(
             "Exit",
             QKeySequence("Ctrl+Q"),
             self.exit,
@@ -115,7 +120,7 @@ class ChatLogWidget(QWidget):
         secs = self.results.get("duration")
         dil = self.results.get("rewards", {}).get("Dilithium Ore", 0)
         self.clipboard.setText(
-            f"NR ({int(secs/3600):0>2}h {int(secs%3600/60):0>2}m {int(secs%60)}s) - {int(dil/secs):0>2} DPS",
+            f"NR ({int(secs/3600):0>2}h {int(secs % 3600/60)                                         :0>2}m {int(secs % 60)}s) - {int(dil/secs):0>2} DPS",
             mode=QClipboard.Mode.Clipboard,
         )
 
@@ -137,6 +142,16 @@ class ChatLogWidget(QWidget):
             self.settings.setValue("save_dir", os.path.dirname(fname))
             with open(fname, "w") as file:
                 file.write(json.dumps(self.results))
+
+    @QtCore.Slot()
+    def truncate_dialog(self):
+        """Save Chat Log Metadata"""
+
+        if self.filename is None:
+            return
+
+        with open(self.filename, "w") as file:
+            file.truncate(0)
 
     @QtCore.Slot(dict)
     def populate(self, results):
@@ -164,7 +179,8 @@ class ChatLogWidget(QWidget):
         if not secs:
             text = "Numeric Received (not running)"
         else:
-            text = f"Numeric Received ({int(secs/3600):0>2}h {int(secs%3600/60):0>2}m {int(secs%60)}s) ({int(dil/secs):0>2} DPS)"
+            text = f"Numeric Received ({int(secs/3600):0>2}h {int(secs % 3600/60):0>2}m {
+                int(secs % 60)}s) ({int(dil/secs):0>2} DPS)"
 
         self.setWindowTitle(text)
         self.label.setText(text)
